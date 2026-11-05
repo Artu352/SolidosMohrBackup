@@ -1,0 +1,1412 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Círculo de Mohr Interactivo — Transformación de Esfuerzos y Deformaciones</title>
+  <style>
+    :root {
+      --bg-main: #0b1120;
+      --bg-panel: #111827;
+      --bg-card: #1e293b;
+      --border: #334155;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-x: #22d3ee;
+      --accent-y: #a855f7;
+      --accent-tau: #f59e0b;
+      --accent-p: #10b981;
+      --danger: #f43f5e;
+      --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      line-height: 1.5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border);
+      padding: 0.9rem 1.5rem;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .brand-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 2px solid var(--accent);
+      position: relative;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+    }
+
+    .brand-icon::before,
+    .brand-icon::after {
+      content: "";
+      position: absolute;
+      background: var(--accent);
+    }
+
+    .brand-icon::before {
+      width: 100%;
+      height: 1px;
+    }
+
+    .brand-icon::after {
+      width: 1px;
+      height: 100%;
+    }
+
+    h1 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    .subtitle {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem;
+      align-items: center;
+    }
+
+    select, button {
+      background: var(--bg-card);
+      color: var(--text-main);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.45rem 0.75rem;
+      font-size: 0.82rem;
+      font-family: inherit;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s, transform 0.1s;
+    }
+
+    select:hover, button:hover {
+      border-color: var(--accent);
+      background: #263449;
+    }
+
+    button:active {
+      transform: translateY(1px);
+    }
+
+    .btn-accent {
+      border-color: rgba(56, 189, 248, 0.5);
+      color: var(--accent);
+    }
+
+    .mode-switch {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.4rem;
+      background: var(--bg-main);
+      padding: 0.3rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .mode-switch button {
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      padding: 0.4rem 0.5rem;
+      font-size: 0.76rem;
+      font-weight: 600;
+      border-radius: 5px;
+    }
+
+    .mode-switch button.active {
+      background: var(--bg-card);
+      color: var(--accent);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+    }
+
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 1rem;
+      padding: 1rem 1.5rem;
+      max-width: 1600px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    @media (max-width: 1024px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.15rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.1rem;
+    }
+
+    .section-title {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      font-weight: 700;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.4rem;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .control-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+    }
+
+    .control-label {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-weight: 600;
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .number-input-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    input[type="number"] {
+      width: 86px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      padding: 0.25rem 0.45rem;
+      border-radius: 5px;
+      text-align: right;
+    }
+
+    input[type="number"]:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .unit-tag {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      min-width: 32px;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 6px;
+      background: var(--bg-card);
+      border-radius: 999px;
+      outline: none;
+      border: 1px solid var(--border);
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      border: 2px solid var(--bg-main);
+      box-shadow: 0 0 6px rgba(56, 189, 248, 0.6);
+    }
+
+    .quick-buttons {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.4rem;
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.55rem;
+    }
+
+    .metric-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 0.55rem 0.7rem;
+    }
+
+    .metric-name {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .metric-val {
+      font-family: var(--font-mono);
+      font-size: 0.96rem;
+      font-weight: 700;
+      margin-top: 0.15rem;
+    }
+
+    .viz-workspace {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .canvas-grid {
+      display: grid;
+      grid-template-columns: 1.35fr 1fr;
+      gap: 1rem;
+      min-height: 410px;
+    }
+
+    @media (max-width: 820px) {
+      .canvas-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .canvas-card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.9rem;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .canvas-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+      flex-wrap: wrap;
+      gap: 0.3rem;
+    }
+
+    .canvas-title {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .canvas-hint {
+      font-size: 0.74rem;
+      color: var(--text-muted);
+    }
+
+    .canvas-container {
+      flex: 1;
+      position: relative;
+      width: 100%;
+      min-height: 330px;
+      background: radial-gradient(circle at center, #131c31 0%, #0b1120 100%);
+      border-radius: 7px;
+      border: 1px solid #1e293b;
+      overflow: hidden;
+    }
+
+    canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      cursor: grab;
+    }
+
+    canvas:active {
+      cursor: grabbing;
+    }
+
+    .results-section, .equations-form-section {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem 1.15rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+
+    .results-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
+      gap: 0.65rem;
+    }
+
+    .result-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-top: 3px solid var(--accent);
+      border-radius: 7px;
+      padding: 0.65rem 0.8rem;
+    }
+
+    .result-box.res-x { border-top-color: var(--accent-x); }
+    .result-box.res-y { border-top-color: var(--accent-y); }
+    .result-box.res-t { border-top-color: var(--accent-tau); }
+    .result-box.res-p { border-top-color: var(--accent-p); }
+
+    .result-label {
+      font-size: 0.73rem;
+      color: var(--text-muted);
+      margin-bottom: 0.2rem;
+    }
+
+    .result-number {
+      font-family: var(--font-mono);
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .result-sub {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-top: 0.15rem;
+    }
+
+    .equations-bar {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 0.75rem;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+    }
+
+    .eq-box {
+      background: var(--bg-card);
+      border-left: 3px solid var(--accent);
+      padding: 0.6rem 0.8rem;
+      border-radius: 5px;
+    }
+
+    .eq-box.eq-x { border-left-color: var(--accent-x); }
+    .eq-box.eq-y { border-left-color: var(--accent-y); }
+    .eq-box.eq-t { border-left-color: var(--accent-tau); }
+    .eq-box.eq-p { border-left-color: var(--accent-p); }
+
+    .eq-title {
+      font-size: 0.72rem;
+      color: var(--accent);
+      font-weight: 700;
+      margin-bottom: 0.2rem;
+      font-family: var(--font-sans);
+    }
+
+    .eq-formula {
+      color: var(--text-muted);
+      font-size: 0.74rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .eq-result {
+      color: var(--text-main);
+      font-weight: 600;
+      font-size: 0.82rem;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <div class="brand-icon"></div>
+      <div>
+        <h1>Círculo de Mohr Interactivo</h1>
+        <div class="subtitle">Transformación de Esfuerzo Plano 2D y Analizador de Esfuerzos Principales</div>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <label for="modeSelect" class="subtitle">Caso:</label>
+      <select id="modeSelect">
+        <option value="general">Biaxial General + Cortante</option>
+        <option value="strainToStress">Deformación a Esfuerzo (&epsilon; &rarr; &sigma;)</option>
+        <option value="stressToStrain">Esfuerzo a Deformación (&sigma; &rarr; &epsilon;)</option>
+      </select>
+
+      <label for="unitSelect" class="subtitle">Unidades:</label>
+      <select id="unitSelect">
+        <option value="MPa">MPa</option>
+        <option value="ksi">ksi</option>
+        <option value="kPa">kPa</option>
+      </select>
+    </div>
+  </header>
+
+  <main>
+    <!-- Panel Lateral de Controles -->
+    <aside class="panel">
+      <div class="section-title" id="inputSectionTitle">Estado de Esfuerzos de Entrada</div>
+
+      <!-- Entrada 1: Sigma X o Epsilon X -->
+      <div class="control-group">
+        <div class="control-header">
+          <span class="control-label" id="lblInputX">
+            <span class="dot" style="background: var(--accent-x)"></span>
+            Esfuerzo Normal &sigma;<sub>x</sub>
+          </span>
+          <div class="number-input-wrap">
+            <input type="number" id="numInputX" value="80" min="-2000" max="2000" step="1" />
+            <span class="unit-tag" id="unitInputX">MPa</span>
+          </div>
+        </div>
+        <input type="range" id="rngInputX" value="80" min="-200" max="200" step="1" />
+      </div>
+
+      <!-- Entrada 2: Sigma Y o Epsilon Y -->
+      <div class="control-group">
+        <div class="control-header">
+          <span class="control-label" id="lblInputY">
+            <span class="dot" style="background: var(--accent-y)"></span>
+            Esfuerzo Normal &sigma;<sub>y</sub>
+          </span>
+          <div class="number-input-wrap">
+            <input type="number" id="numInputY" value="-40" min="-2000" max="2000" step="1" />
+            <span class="unit-tag" id="unitInputY">MPa</span>
+          </div>
+        </div>
+        <input type="range" id="rngInputY" value="-40" min="-200" max="200" step="1" />
+      </div>
+
+      <!-- Entrada 3: Tau XY o Gamma XY -->
+      <div class="control-group">
+        <div class="control-header">
+          <span class="control-label" id="lblInputXY">
+            <span class="dot" style="background: var(--accent-tau)"></span>
+            Esfuerzo Cortante &tau;<sub>xy</sub>
+          </span>
+          <div class="number-input-wrap">
+            <input type="number" id="numInputXY" value="50" min="-2000" max="2000" step="1" />
+            <span class="unit-tag" id="unitInputXY">MPa</span>
+          </div>
+        </div>
+        <input type="range" id="rngInputXY" value="50" min="-200" max="200" step="1" />
+      </div>
+
+      <!-- Selector para cambiar entre Ángulo theta y Módulo de Young E, v -->
+      <div class="section-title">Parámetro de Cálculo</div>
+      <div class="mode-switch">
+        <button type="button" id="btnSwitchAngle" class="active">Ángulo &theta;</button>
+        <button type="button" id="btnSwitchElastic">Módulo E y &nu;</button>
+      </div>
+
+      <!-- Controles de Ángulo Theta -->
+      <div id="angleControlsWrap" class="control-group">
+        <div class="control-header">
+          <span class="control-label">
+            <span class="dot" style="background: var(--accent-p)"></span>
+            Ángulo de Orientación &theta;
+          </span>
+          <div class="number-input-wrap">
+            <input type="number" id="numTheta" value="25" min="-90" max="90" step="0.5" />
+            <span class="unit-tag">grados</span>
+          </div>
+        </div>
+        <input type="range" id="rngTheta" value="25" min="-90" max="90" step="0.5" />
+
+        <div class="quick-buttons" style="margin-top: 0.4rem;">
+          <button type="button" id="btnZeroTheta">&theta; = 0&deg;</button>
+          <button type="button" id="btnPrincipal" class="btn-accent">Ir a &theta;<sub>p1</sub></button>
+          <button type="button" id="btnMaxShear" class="btn-accent">Ir a &theta;<sub>s1</sub></button>
+        </div>
+      </div>
+
+      <!-- Controles de Módulo de Young (E) y Poisson (v) -->
+      <div id="elasticControlsWrap" class="control-group hidden">
+        <div class="control-header">
+          <span class="control-label">
+            <span class="dot" style="background: var(--accent)"></span>
+            Módulo de Young E
+          </span>
+          <div class="number-input-wrap">
+            <input type="number" id="numYoungE" value="70" min="1" max="500" step="1" />
+            <span class="unit-tag">GPa</span>
+          </div>
+        </div>
+        <input type="range" id="rngYoungE" value="70" min="1" max="300" step="1" />
+
+        <div class="control-header" style="margin-top: 0.45rem;">
+          <span class="control-label">
+            <span class="dot" style="background: var(--accent-p)"></span>
+            Coeficiente de Poisson &nu;
+          </span>
+          <div class="number-input-wrap">
+            <input type="number" id="numPoissonV" value="0.33" min="0.01" max="0.49" step="0.01" />
+            <span class="unit-tag">-</span>
+          </div>
+        </div>
+        <input type="range" id="rngPoissonV" value="0.33" min="0.01" max="0.49" step="0.01" />
+      </div>
+
+      <div class="section-title">Valores Principales e Invariantes</div>
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-name"><span>Principal Máx &sigma;<sub>1</sub></span></div>
+          <div class="metric-val" id="outSigma1" style="color: var(--accent-p)">0.0</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-name"><span>Principal Mín &sigma;<sub>2</sub></span></div>
+          <div class="metric-val" id="outSigma2" style="color: var(--accent-p)">0.0</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-name"><span>Cortante Máx &tau;<sub>máx</sub></span></div>
+          <div class="metric-val" id="outTauMax" style="color: var(--accent-tau)">0.0</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-name"><span>Centro C = &sigma;<sub>prom</sub></span></div>
+          <div class="metric-val" id="outSigmaAvg">0.0</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-name"><span>Ángulo Principal &theta;<sub>p1</sub></span></div>
+          <div class="metric-val" id="outThetaP">0.0&deg;</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-name"><span>Ángulo Cortante &theta;<sub>s1</sub></span></div>
+          <div class="metric-val" id="outThetaS">0.0&deg;</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Área Derecha: Gráficas + Sección de Resultados + Formulario de Ecuaciones -->
+    <section class="viz-workspace">
+      <div class="canvas-grid">
+        <div class="canvas-card">
+          <div class="canvas-header">
+            <span class="canvas-title">Círculo de Mohr (Espacio &sigma; &ndash; &tau;)</span>
+            <span class="canvas-hint">Arrastra el punto A alrededor del círculo para rotar &theta;</span>
+          </div>
+          <div class="canvas-container">
+            <canvas id="mohrCanvas"></canvas>
+          </div>
+        </div>
+
+        <div class="canvas-card">
+          <div class="canvas-header">
+            <span class="canvas-title">Elemento de Esfuerzo 2D Rotado</span>
+            <span class="canvas-hint">Arrastra el elemento para rotar el ángulo físico &theta;</span>
+          </div>
+          <div class="canvas-container">
+            <canvas id="elementCanvas"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECCIÓN DE RESULTADOS DEBAJO DE LA GRÁFICA -->
+      <div class="results-section">
+        <div class="section-title">Resultados Calculados</div>
+        <div class="results-grid">
+          <div class="result-box res-x">
+            <div class="result-label">Esfuerzo Normal &sigma;<sub>x</sub></div>
+            <div class="result-number" id="resSigmaX">0.00 MPa</div>
+            <div class="result-sub" id="resSigmaXPa">0 Pa</div>
+          </div>
+          <div class="result-box res-y">
+            <div class="result-label">Esfuerzo Normal &sigma;<sub>y</sub></div>
+            <div class="result-number" id="resSigmaY">0.00 MPa</div>
+            <div class="result-sub" id="resSigmaYPa">0 Pa</div>
+          </div>
+          <div class="result-box res-t">
+            <div class="result-label">Esfuerzo Cortante &tau;<sub>xy</sub></div>
+            <div class="result-number" id="resTauXY">0.00 MPa</div>
+            <div class="result-sub" id="resTauXYPa">0 Pa</div>
+          </div>
+          <div class="result-box res-p">
+            <div class="result-label">Módulo Cortante G</div>
+            <div class="result-number" id="resShearG">26.32 GPa</div>
+            <div class="result-sub" id="resShearGPa">2.6316 &times; 10<sup>10</sup> Pa</div>
+          </div>
+          <div class="result-box res-x">
+            <div class="result-label">Deformación Unitaria &epsilon;<sub>x</sub></div>
+            <div class="result-number" id="resEpsX">800.0 &mu;&epsilon;</div>
+            <div class="result-sub" id="resEpsXDec">8.00 &times; 10<sup>-4</sup></div>
+          </div>
+          <div class="result-box res-y">
+            <div class="result-label">Deformación Unitaria &epsilon;<sub>y</sub></div>
+            <div class="result-number" id="resEpsY">-300.0 &mu;&epsilon;</div>
+            <div class="result-sub" id="resEpsYDec">-3.00 &times; 10<sup>-4</sup></div>
+          </div>
+          <div class="result-box res-t">
+            <div class="result-label">Deformación Cortante &gamma;<sub>xy</sub></div>
+            <div class="result-number" id="resGammaXY">500.0 &mu;&epsilon;</div>
+            <div class="result-sub" id="resGammaXYDec">5.00 &times; 10<sup>-4</sup></div>
+          </div>
+          <div class="result-box res-p">
+            <div class="result-label">Transformados (&theta; = <span id="resAngleSpan">25.0&deg;</span>)</div>
+            <div class="result-number" id="resTransSummary">&sigma;<sub>x'</sub> = 0.0 MPa</div>
+            <div class="result-sub" id="resTransSub">&sigma;<sub>y'</sub> = 0.0 | &tau;<sub>x'y'</sub> = 0.0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FORMULARIO DE ECUACIONES UTILIZADAS DEBAJO DE RESULTADOS -->
+      <div class="equations-form-section">
+        <div class="section-title">Formulario de Ecuaciones Utilizadas</div>
+        <div class="equations-bar">
+          <!-- Ecuaciones de Transformación de Esfuerzos -->
+          <div class="eq-box eq-x">
+            <div class="eq-title">Esfuerzo Normal Transformado &sigma;<sub>x'</sub></div>
+            <div class="eq-formula">&sigma;<sub>x'</sub> = (&sigma;<sub>x</sub> + &sigma;<sub>y</sub>)/2 + [(&sigma;<sub>x</sub> - &sigma;<sub>y</sub>)/2]cos(2&theta;) + &tau;<sub>xy</sub>sen(2&theta;)</div>
+            <div class="eq-result" id="eqSigmaXPrime">&sigma;<sub>x'</sub> = 0.00 MPa</div>
+          </div>
+
+          <div class="eq-box eq-y">
+            <div class="eq-title">Esfuerzo Normal Transformado &sigma;<sub>y'</sub></div>
+            <div class="eq-formula">&sigma;<sub>y'</sub> = (&sigma;<sub>x</sub> + &sigma;<sub>y</sub>)/2 - [(&sigma;<sub>x</sub> - &sigma;<sub>y</sub>)/2]cos(2&theta;) - &tau;<sub>xy</sub>sen(2&theta;)</div>
+            <div class="eq-result" id="eqSigmaYPrime">&sigma;<sub>y'</sub> = 0.00 MPa</div>
+          </div>
+
+          <div class="eq-box eq-t">
+            <div class="eq-title">Esfuerzo Cortante Transformado &tau;<sub>x'y'</sub></div>
+            <div class="eq-formula">&tau;<sub>x'y'</sub> = -[(&sigma;<sub>x</sub> - &sigma;<sub>y</sub>)/2]sen(2&theta;) + &tau;<sub>xy</sub>cos(2&theta;)</div>
+            <div class="eq-result" id="eqTauXYPrime">&tau;<sub>x'y'</sub> = 0.00 MPa</div>
+          </div>
+
+          <!-- Fórmulas del Círculo de Mohr -->
+          <div class="eq-box eq-p">
+            <div class="eq-title">Centro (C), Radio (R) y Esfuerzos Principales</div>
+            <div class="eq-formula">C = &sigma;<sub>prom</sub> = (&sigma;<sub>x</sub>+&sigma;<sub>y</sub>)/2 &nbsp;|&nbsp; R = &radic;[((&sigma;<sub>x</sub>-&sigma;<sub>y</sub>)/2)&sup2; + &tau;<sub>xy</sub>&sup2;] &nbsp;|&nbsp; &sigma;<sub>1,2</sub> = C &plusmn; R</div>
+            <div class="eq-result" id="eqMohrCircle">C = 20.0 MPa | R = 78.1 MPa</div>
+          </div>
+
+          <!-- Ley de Hooke: Deformación a Esfuerzo -->
+          <div class="eq-box eq-x">
+            <div class="eq-title">Ley de Hooke 2D (&epsilon; &rarr; &sigma;)</div>
+            <div class="eq-formula">&sigma;<sub>x</sub> = [E / (1 - &nu;&sup2;)](&epsilon;<sub>x</sub> + &nu;&epsilon;<sub>y</sub>) &nbsp;|&nbsp; &sigma;<sub>y</sub> = [E / (1 - &nu;&sup2;)](&epsilon;<sub>y</sub> + &nu;&epsilon;<sub>x</sub>)</div>
+            <div class="eq-result" id="eqHookeStress">&sigma;<sub>x</sub> = 55.07 MPa | &sigma;<sub>y</sub> = -4.43 MPa</div>
+          </div>
+
+          <!-- Ley de Hooke: Esfuerzo Cortante y Módulo G -->
+          <div class="eq-box eq-t">
+            <div class="eq-title">Cortante y Módulo de Rigidez (G)</div>
+            <div class="eq-formula">G = E / [2(1 + &nu;)] &nbsp;|&nbsp; &tau;<sub>xy</sub> = G &middot; &gamma;<sub>xy</sub> = [E / (2(1 + &nu;))]&gamma;<sub>xy</sub></div>
+            <div class="eq-result" id="eqHookeShear">G = 26.32 GPa | &tau;<sub>xy</sub> = 13.16 MPa</div>
+          </div>
+
+          <!-- Ley de Hooke Inversa: Esfuerzo a Deformación -->
+          <div class="eq-box eq-y">
+            <div class="eq-title">Deformaciones Unitarias (&sigma; &rarr; &epsilon;)</div>
+            <div class="eq-formula">&epsilon;<sub>x</sub> = (1/E)(&sigma;<sub>x</sub> - &nu;&sigma;<sub>y</sub>) &nbsp;|&nbsp; &epsilon;<sub>y</sub> = (1/E)(&sigma;<sub>y</sub> - &nu;&sigma;<sub>x</sub>) &nbsp;|&nbsp; &gamma;<sub>xy</sub> = &tau;<sub>xy</sub> / G</div>
+            <div class="eq-result" id="eqHookeStrain">&epsilon;<sub>x</sub> = 800 &mu;&epsilon; | &epsilon;<sub>y</sub> = -300 &mu;&epsilon; | &gamma;<sub>xy</sub> = 500 &mu;&epsilon;</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const state = {
+      mode: 'general', // 'general' | 'strainToStress' | 'stressToStrain'
+      paramMode: 'angle', // 'angle' | 'elastic'
+      sigmaX: 80,
+      sigmaY: -40,
+      tauXY: 50,
+      epsX: 800,     // en microdeformaciones (με)
+      epsY: -300,    // en microdeformaciones (με)
+      gammaXY: 500,  // en microdeformaciones (με)
+      theta: 25,
+      youngE: 70,    // en GPa
+      poissonV: 0.33,
+      unit: 'MPa'
+    };
+
+    const dom = {
+      modeSelect: document.getElementById('modeSelect'),
+      unitSelect: document.getElementById('unitSelect'),
+      inputSectionTitle: document.getElementById('inputSectionTitle'),
+      lblInputX: document.getElementById('lblInputX'),
+      lblInputY: document.getElementById('lblInputY'),
+      lblInputXY: document.getElementById('lblInputXY'),
+      numInputX: document.getElementById('numInputX'),
+      rngInputX: document.getElementById('rngInputX'),
+      numInputY: document.getElementById('numInputY'),
+      rngInputY: document.getElementById('rngInputY'),
+      numInputXY: document.getElementById('numInputXY'),
+      rngInputXY: document.getElementById('rngInputXY'),
+      unitInputX: document.getElementById('unitInputX'),
+      unitInputY: document.getElementById('unitInputY'),
+      unitInputXY: document.getElementById('unitInputXY'),
+      btnSwitchAngle: document.getElementById('btnSwitchAngle'),
+      btnSwitchElastic: document.getElementById('btnSwitchElastic'),
+      angleControlsWrap: document.getElementById('angleControlsWrap'),
+      elasticControlsWrap: document.getElementById('elasticControlsWrap'),
+      numTheta: document.getElementById('numTheta'),
+      rngTheta: document.getElementById('rngTheta'),
+      numYoungE: document.getElementById('numYoungE'),
+      rngYoungE: document.getElementById('rngYoungE'),
+      numPoissonV: document.getElementById('numPoissonV'),
+      rngPoissonV: document.getElementById('rngPoissonV'),
+      btnZeroTheta: document.getElementById('btnZeroTheta'),
+      btnPrincipal: document.getElementById('btnPrincipal'),
+      btnMaxShear: document.getElementById('btnMaxShear'),
+      outSigma1: document.getElementById('outSigma1'),
+      outSigma2: document.getElementById('outSigma2'),
+      outTauMax: document.getElementById('outTauMax'),
+      outSigmaAvg: document.getElementById('outSigmaAvg'),
+      outThetaP: document.getElementById('outThetaP'),
+      outThetaS: document.getElementById('outThetaS'),
+      resSigmaX: document.getElementById('resSigmaX'),
+      resSigmaXPa: document.getElementById('resSigmaXPa'),
+      resSigmaY: document.getElementById('resSigmaY'),
+      resSigmaYPa: document.getElementById('resSigmaYPa'),
+      resTauXY: document.getElementById('resTauXY'),
+      resTauXYPa: document.getElementById('resTauXYPa'),
+      resShearG: document.getElementById('resShearG'),
+      resShearGPa: document.getElementById('resShearGPa'),
+      resEpsX: document.getElementById('resEpsX'),
+      resEpsXDec: document.getElementById('resEpsXDec'),
+      resEpsY: document.getElementById('resEpsY'),
+      resEpsYDec: document.getElementById('resEpsYDec'),
+      resGammaXY: document.getElementById('resGammaXY'),
+      resGammaXYDec: document.getElementById('resGammaXYDec'),
+      resAngleSpan: document.getElementById('resAngleSpan'),
+      resTransSummary: document.getElementById('resTransSummary'),
+      resTransSub: document.getElementById('resTransSub'),
+      eqSigmaXPrime: document.getElementById('eqSigmaXPrime'),
+      eqSigmaYPrime: document.getElementById('eqSigmaYPrime'),
+      eqTauXYPrime: document.getElementById('eqTauXYPrime'),
+      eqMohrCircle: document.getElementById('eqMohrCircle'),
+      eqHookeStress: document.getElementById('eqHookeStress'),
+      eqHookeShear: document.getElementById('eqHookeShear'),
+      eqHookeStrain: document.getElementById('eqHookeStrain'),
+      mohrCanvas: document.getElementById('mohrCanvas'),
+      elementCanvas: document.getElementById('elementCanvas')
+    };
+
+    function computeAll() {
+      const E_MPa = state.youngE * 1000; // 1 GPa = 1000 MPa
+      const v = state.poissonV;
+      const G_GPa = state.youngE / (2 * (1 + v));
+      const G_MPa = G_GPa * 1000;
+
+      if (state.mode === 'strainToStress') {
+        // Calcular esfuerzos (en MPa) a partir de microdeformaciones (1e-6)
+        const ex = state.epsX * 1e-6;
+        const ey = state.epsY * 1e-6;
+        const gxy = state.gammaXY * 1e-6;
+        const factor = E_MPa / (1 - v * v);
+
+        state.sigmaX = factor * (ex + v * ey);
+        state.sigmaY = factor * (ey + v * ex);
+        state.tauXY = G_MPa * gxy;
+      } else {
+        // Calcular deformaciones (en με) a partir de esfuerzos
+        const ex = (state.sigmaX - v * state.sigmaY) / E_MPa;
+        const ey = (state.sigmaY - v * state.sigmaX) / E_MPa;
+        const gxy = state.tauXY / G_MPa;
+
+        state.epsX = ex * 1e6;
+        state.epsY = ey * 1e6;
+        state.gammaXY = gxy * 1e6;
+      }
+
+      const { sigmaX, sigmaY, tauXY, theta } = state;
+      const sigmaAvg = 0.5 * (sigmaX + sigmaY);
+      const diffHalf = 0.5 * (sigmaX - sigmaY);
+      const R = Math.hypot(diffHalf, tauXY);
+      const sigma1 = sigmaAvg + R;
+      const sigma2 = sigmaAvg - R;
+      const tauMax = R;
+
+      const rad2Theta = (2 * theta * Math.PI) / 180;
+      const cos2T = Math.cos(rad2Theta);
+      const sin2T = Math.sin(rad2Theta);
+
+      const sigmaXPrime = sigmaAvg + diffHalf * cos2T + tauXY * sin2T;
+      const sigmaYPrime = sigmaAvg - diffHalf * cos2T - tauXY * sin2T;
+      const tauXYPrime = -diffHalf * sin2T + tauXY * cos2T;
+
+      const thetaP1 = (0.5 * Math.atan2(tauXY, diffHalf) * 180) / Math.PI;
+      let thetaS1 = thetaP1 - 45;
+      if (thetaS1 < -90) thetaS1 += 180;
+
+      return {
+        sigmaAvg,
+        diffHalf,
+        R,
+        sigma1,
+        sigma2,
+        tauMax,
+        sigmaXPrime,
+        sigmaYPrime,
+        tauXYPrime,
+        thetaP1,
+        thetaS1,
+        G_GPa
+      };
+    }
+
+    function updateInputLabels() {
+      const isStrainInput = state.mode === 'strainToStress';
+      if (isStrainInput) {
+        dom.inputSectionTitle.textContent = 'Estado de Deformaciones de Entrada';
+        dom.lblInputX.innerHTML = `<span class="dot" style="background: var(--accent-x)"></span> Deformación Normal &epsilon;<sub>x</sub>`;
+        dom.lblInputY.innerHTML = `<span class="dot" style="background: var(--accent-y)"></span> Deformación Normal &epsilon;<sub>y</sub>`;
+        dom.lblInputXY.innerHTML = `<span class="dot" style="background: var(--accent-tau)"></span> Deformación Cortante &gamma;<sub>xy</sub>`;
+        dom.unitInputX.textContent = 'με';
+        dom.unitInputY.textContent = 'με';
+        dom.unitInputXY.textContent = 'με';
+        dom.rngInputX.min = -2000; dom.rngInputX.max = 2000;
+        dom.rngInputY.min = -2000; dom.rngInputY.max = 2000;
+        dom.rngInputXY.min = -2000; dom.rngInputXY.max = 2000;
+      } else {
+        dom.inputSectionTitle.textContent = 'Estado de Esfuerzos de Entrada';
+        dom.lblInputX.innerHTML = `<span class="dot" style="background: var(--accent-x)"></span> Esfuerzo Normal &sigma;<sub>x</sub>`;
+        dom.lblInputY.innerHTML = `<span class="dot" style="background: var(--accent-y)"></span> Esfuerzo Normal &sigma;<sub>y</sub>`;
+        dom.lblInputXY.innerHTML = `<span class="dot" style="background: var(--accent-tau)"></span> Esfuerzo Cortante &tau;<sub>xy</sub>`;
+        dom.unitInputX.textContent = state.unit;
+        dom.unitInputY.textContent = state.unit;
+        dom.unitInputXY.textContent = state.unit;
+        dom.rngInputX.min = -200; dom.rngInputX.max = 200;
+        dom.rngInputY.min = -200; dom.rngInputY.max = 200;
+        dom.rngInputXY.min = -200; dom.rngInputXY.max = 200;
+      }
+    }
+
+    function syncInputs() {
+      if (state.mode === 'strainToStress') {
+        dom.numInputX.value = Number(state.epsX.toFixed(1));
+        dom.rngInputX.value = state.epsX;
+        dom.numInputY.value = Number(state.epsY.toFixed(1));
+        dom.rngInputY.value = state.epsY;
+        dom.numInputXY.value = Number(state.gammaXY.toFixed(1));
+        dom.rngInputXY.value = state.gammaXY;
+      } else {
+        dom.numInputX.value = Number(state.sigmaX.toFixed(2));
+        dom.rngInputX.value = state.sigmaX;
+        dom.numInputY.value = Number(state.sigmaY.toFixed(2));
+        dom.rngInputY.value = state.sigmaY;
+        dom.numInputXY.value = Number(state.tauXY.toFixed(2));
+        dom.rngInputXY.value = state.tauXY;
+      }
+
+      dom.numTheta.value = Number(state.theta.toFixed(1));
+      dom.rngTheta.value = state.theta;
+      dom.numYoungE.value = state.youngE;
+      dom.rngYoungE.value = state.youngE;
+      dom.numPoissonV.value = state.poissonV;
+      dom.rngPoissonV.value = state.poissonV;
+    }
+
+    function updateUI() {
+      updateInputLabels();
+      const m = computeAll();
+      syncInputs();
+
+      const u = state.unit;
+
+      // Valores Principales
+      dom.outSigma1.textContent = `${m.sigma1.toFixed(2)} ${u}`;
+      dom.outSigma2.textContent = `${m.sigma2.toFixed(2)} ${u}`;
+      dom.outTauMax.textContent = `${m.tauMax.toFixed(2)} ${u}`;
+      dom.outSigmaAvg.textContent = `${m.sigmaAvg.toFixed(2)} ${u}`;
+      dom.outThetaP.textContent = `${m.thetaP1.toFixed(1)}°`;
+      dom.outThetaS.textContent = `${m.thetaS1.toFixed(1)}°`;
+
+      // Sección de Resultados
+      dom.resSigmaX.textContent = `${state.sigmaX.toFixed(2)} ${u}`;
+      dom.resSigmaXPa.textContent = `${(state.sigmaX * 1e6).toLocaleString('es-MX', { maximumFractionDigits: 2 })} Pa`;
+      dom.resSigmaY.textContent = `${state.sigmaY.toFixed(2)} ${u}`;
+      dom.resSigmaYPa.textContent = `${(state.sigmaY * 1e6).toLocaleString('es-MX', { maximumFractionDigits: 2 })} Pa`;
+      dom.resTauXY.textContent = `${state.tauXY.toFixed(2)} ${u}`;
+      dom.resTauXYPa.textContent = `${(state.tauXY * 1e6).toLocaleString('es-MX', { maximumFractionDigits: 2 })} Pa`;
+
+      dom.resShearG.textContent = `${m.G_GPa.toFixed(3)} GPa`;
+      dom.resShearGPa.textContent = `${(m.G_GPa * 1e9).toExponential(4)} Pa`;
+
+      dom.resEpsX.textContent = `${state.epsX.toFixed(1)} με`;
+      dom.resEpsXDec.textContent = `${(state.epsX * 1e-6).toExponential(2)}`;
+      dom.resEpsY.textContent = `${state.epsY.toFixed(1)} με`;
+      dom.resEpsYDec.textContent = `${(state.epsY * 1e-6).toExponential(2)}`;
+      dom.resGammaXY.textContent = `${state.gammaXY.toFixed(1)} με`;
+      dom.resGammaXYDec.textContent = `${(state.gammaXY * 1e-6).toExponential(2)}`;
+
+      dom.resAngleSpan.textContent = `${state.theta.toFixed(1)}°`;
+      dom.resTransSummary.innerHTML = `&sigma;<sub>x'</sub> = ${m.sigmaXPrime.toFixed(2)} ${u}`;
+      dom.resTransSub.innerHTML = `&sigma;<sub>y'</sub> = ${m.sigmaYPrime.toFixed(2)} | &tau;<sub>x'y'</sub> = ${m.tauXYPrime.toFixed(2)}`;
+
+      // Formulario de Ecuaciones
+      dom.eqSigmaXPrime.innerHTML = `&sigma;<sub>x'</sub> = ${m.sigmaXPrime.toFixed(2)} ${u}`;
+      dom.eqSigmaYPrime.innerHTML = `&sigma;<sub>y'</sub> = ${m.sigmaYPrime.toFixed(2)} ${u}`;
+      dom.eqTauXYPrime.innerHTML = `&tau;<sub>x'y'</sub> = ${m.tauXYPrime.toFixed(2)} ${u}`;
+      dom.eqMohrCircle.innerHTML = `C = ${m.sigmaAvg.toFixed(2)} ${u} | R = ${m.R.toFixed(2)} ${u} | &sigma;<sub>1</sub> = ${m.sigma1.toFixed(1)}, &sigma;<sub>2</sub> = ${m.sigma2.toFixed(1)}`;
+      dom.eqHookeStress.innerHTML = `&sigma;<sub>x</sub> = ${state.sigmaX.toFixed(2)} ${u} | &sigma;<sub>y</sub> = ${state.sigmaY.toFixed(2)} ${u}`;
+      dom.eqHookeShear.innerHTML = `G = ${m.G_GPa.toFixed(3)} GPa | &tau;<sub>xy</sub> = ${state.tauXY.toFixed(2)} ${u}`;
+      dom.eqHookeStrain.innerHTML = `&epsilon;<sub>x</sub> = ${state.epsX.toFixed(1)} &mu;&epsilon; | &epsilon;<sub>y</sub> = ${state.epsY.toFixed(1)} &mu;&epsilon; | &gamma;<sub>xy</sub> = ${state.gammaXY.toFixed(1)} &mu;&epsilon;`;
+
+      drawMohrCircle(m);
+      drawStressElement(m);
+    }
+
+    function setupCanvas(canvas) {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      return { ctx, w: rect.width, h: rect.height };
+    }
+
+    function drawMohrCircle(m) {
+      const { ctx, w, h } = setupCanvas(dom.mohrCanvas);
+      ctx.clearRect(0, 0, w, h);
+
+      const maxAbsStress = Math.max(
+        Math.abs(m.sigma1),
+        Math.abs(m.sigma2),
+        m.R,
+        40
+      ) * 1.35;
+
+      const scale = Math.min(w, h) / (2 * maxAbsStress);
+      const originX = w / 2 - m.sigmaAvg * scale * 0.25;
+      const originY = h / 2;
+
+      const toScreenX = (sigma) => originX + sigma * scale;
+      const toScreenY = (tau) => originY + tau * scale;
+
+      // Cuadrícula
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.12)';
+      ctx.lineWidth = 1;
+      const step = maxAbsStress > 180 ? 50 : maxAbsStress > 80 ? 25 : 10;
+      for (let s = -500; s <= 500; s += step) {
+        const gx = toScreenX(s);
+        if (gx >= 0 && gx <= w) {
+          ctx.beginPath();
+          ctx.moveTo(gx, 0);
+          ctx.lineTo(gx, h);
+          ctx.stroke();
+        }
+        const gy = toScreenY(s);
+        if (gy >= 0 && gy <= h) {
+          ctx.beginPath();
+          ctx.moveTo(0, gy);
+          ctx.lineTo(w, gy);
+          ctx.stroke();
+        }
+      }
+
+      // Ejes Principales
+      ctx.strokeStyle = '#475569';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(0, originY);
+      ctx.lineTo(w, originY);
+      ctx.moveTo(originX, 0);
+      ctx.lineTo(originX, h);
+      ctx.stroke();
+
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '12px monospace';
+      ctx.fillText('+σ', w - 26, originY - 8);
+      ctx.fillText('+τ (Horario)', originX + 8, h - 12);
+      ctx.fillText('-τ (Antihorario)', originX + 8, 18);
+
+      const cx = toScreenX(m.sigmaAvg);
+      const cy = toScreenY(0);
+      const radiusPx = m.R * scale;
+
+      // Círculo de Mohr
+      ctx.beginPath();
+      ctx.arc(cx, cy, radiusPx, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.06)';
+      ctx.fill();
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 2.2;
+      ctx.stroke();
+
+      // Diámetro de referencia A-B (theta = 0)
+      const x0 = toScreenX(state.sigmaX);
+      const y0 = toScreenY(state.tauXY);
+      const x90 = toScreenX(state.sigmaY);
+      const y90 = toScreenY(-state.tauXY);
+
+      ctx.setLineDash([5, 5]);
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.45)';
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(x0, y0);
+      ctx.lineTo(x90, y90);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Diámetro transformado X'-Y'
+      const xp = toScreenX(m.sigmaXPrime);
+      const yp = toScreenY(m.tauXYPrime);
+      const ypX = toScreenX(m.sigmaYPrime);
+      const ypY = toScreenY(-m.tauXYPrime);
+
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.moveTo(xp, yp);
+      ctx.lineTo(ypX, ypY);
+      ctx.stroke();
+
+      // Arco 2*theta
+      if (m.R > 1e-3 && Math.abs(state.theta) > 0.2) {
+        const startAngle = Math.atan2(y0 - cy, x0 - cx);
+        const endAngle = Math.atan2(yp - cy, xp - cx);
+        ctx.beginPath();
+        ctx.arc(cx, cy, Math.min(38, radiusPx * 0.45), startAngle, endAngle, state.theta > 0);
+        ctx.strokeStyle = '#10b981';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+
+      // Puntos Principales y Centro
+      drawPoint(ctx, cx, cy, '#94a3b8', 4, `C`);
+      drawPoint(ctx, toScreenX(m.sigma1), cy, '#10b981', 5, `σ₁`);
+      drawPoint(ctx, toScreenX(m.sigma2), cy, '#10b981', 5, `σ₂`);
+
+      // Puntos A, B y Transformados
+      drawPoint(ctx, x0, y0, '#64748b', 4.5, 'A');
+      drawPoint(ctx, ypX, ypY, '#a855f7', 6, `B' (${m.sigmaYPrime.toFixed(1)}, ${(-m.tauXYPrime).toFixed(1)})`);
+      drawPoint(ctx, xp, yp, '#22d3ee', 7.5, `A' (${m.sigmaXPrime.toFixed(1)}, ${m.tauXYPrime.toFixed(1)})`);
+    }
+
+    function drawPoint(ctx, x, y, color, r, label) {
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.strokeStyle = '#0b1120';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      if (label) {
+        ctx.fillStyle = '#f8fafc';
+        ctx.font = '600 11px monospace';
+        ctx.fillText(label, x + r + 5, y - r - 2);
+      }
+    }
+
+    function drawStressElement(m) {
+      const { ctx, w, h } = setupCanvas(dom.elementCanvas);
+      ctx.clearRect(0, 0, w, h);
+
+      const cx = w / 2;
+      const cy = h / 2;
+      const boxSize = Math.min(w, h) * 0.34;
+      const half = boxSize / 2;
+
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.25)';
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(cx - half * 1.9, cy);
+      ctx.lineTo(cx + half * 1.9, cy);
+      ctx.moveTo(cx, cy - half * 1.9);
+      ctx.lineTo(cx, cy + half * 1.9);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.fillStyle = '#64748b';
+      ctx.font = '11px monospace';
+      ctx.fillText('x', cx + half * 1.8, cy - 6);
+      ctx.fillText('y', cx + 6, cy - half * 1.75);
+
+      ctx.save();
+      ctx.translate(cx, cy);
+      const rad = (-state.theta * Math.PI) / 180;
+      ctx.rotate(rad);
+
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(half * 1.75, 0);
+      ctx.moveTo(0, 0);
+      ctx.lineTo(0, -half * 1.75);
+      ctx.stroke();
+      ctx.fillStyle = '#38bdf8';
+      ctx.fillText("x'", half * 1.65, -5);
+      ctx.fillText("y'", 5, -half * 1.6);
+
+      ctx.fillStyle = 'rgba(30, 41, 59, 0.9)';
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.rect(-half, -half, boxSize, boxSize);
+      ctx.fill();
+      ctx.stroke();
+
+      const arrowLen = half * 0.55;
+      if (Math.abs(m.sigmaXPrime) > 0.5) {
+        const isTension = m.sigmaXPrime > 0;
+        drawArrow(ctx, isTension ? half + 6 : half + arrowLen, 0, isTension ? half + arrowLen : half + 6, 0, '#22d3ee');
+        drawArrow(ctx, isTension ? -half - 6 : -half - arrowLen, 0, isTension ? -half - arrowLen : -half - 6, 0, '#22d3ee');
+      }
+
+      if (Math.abs(m.sigmaYPrime) > 0.5) {
+        const isTension = m.sigmaYPrime > 0;
+        drawArrow(ctx, 0, isTension ? -half - 6 : -half - arrowLen, 0, isTension ? -half - arrowLen : -half - 6, '#a855f7');
+        drawArrow(ctx, 0, isTension ? half + 6 : half + arrowLen, 0, isTension ? half + arrowLen : half + 6, '#a855f7');
+      }
+
+      if (Math.abs(m.tauXYPrime) > 0.5) {
+        const pos = m.tauXYPrime > 0;
+        const offset = half + 10;
+        const sLen = half * 0.55;
+        drawArrow(ctx, offset, pos ? sLen : -sLen, offset, pos ? -sLen : sLen, '#f59e0b');
+        drawArrow(ctx, -offset, pos ? -sLen : sLen, -offset, pos ? sLen : -sLen, '#f59e0b');
+        drawArrow(ctx, pos ? -sLen : sLen, -offset, pos ? sLen : -sLen, -offset, '#f59e0b');
+        drawArrow(ctx, pos ? sLen : -sLen, offset, pos ? -sLen : sLen, offset, '#f59e0b');
+      }
+
+      ctx.restore();
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = '600 12px monospace';
+      ctx.fillText(`θ = ${state.theta.toFixed(1)}°`, 14, 22);
+    }
+
+    function drawArrow(ctx, x1, y1, x2, y2, color) {
+      const headLen = 7;
+      const angle = Math.atan2(y2 - y1, x2 - x1);
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(x2, y2);
+      ctx.lineTo(x2 - headLen * Math.cos(angle - Math.PI / 6), y2 - headLen * Math.sin(angle - Math.PI / 6));
+      ctx.lineTo(x2 - headLen * Math.cos(angle + Math.PI / 6), y2 - headLen * Math.sin(angle + Math.PI / 6));
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // Eventos de Entradas Principales (Esfuerzo o Deformación según el modo)
+    function handleInputX(e) {
+      const val = parseFloat(e.target.value);
+      if (Number.isNaN(val)) return;
+      if (state.mode === 'strainToStress') state.epsX = val;
+      else state.sigmaX = val;
+      updateUI();
+    }
+
+    function handleInputY(e) {
+      const val = parseFloat(e.target.value);
+      if (Number.isNaN(val)) return;
+      if (state.mode === 'strainToStress') state.epsY = val;
+      else state.sigmaY = val;
+      updateUI();
+    }
+
+    function handleInputXY(e) {
+      const val = parseFloat(e.target.value);
+      if (Number.isNaN(val)) return;
+      if (state.mode === 'strainToStress') state.gammaXY = val;
+      else state.tauXY = val;
+      updateUI();
+    }
+
+    dom.numInputX.addEventListener('input', handleInputX);
+    dom.rngInputX.addEventListener('input', handleInputX);
+    dom.numInputY.addEventListener('input', handleInputY);
+    dom.rngInputY.addEventListener('input', handleInputY);
+    dom.numInputXY.addEventListener('input', handleInputXY);
+    dom.rngInputXY.addEventListener('input', handleInputXY);
+
+    // Eventos de Ángulo, E y Poisson
+    function bindSimpleControl(numEl, rngEl, key) {
+      const handler = (e) => {
+        const val = parseFloat(e.target.value);
+        if (!Number.isNaN(val)) {
+          state[key] = val;
+          updateUI();
+        }
+      };
+      numEl.addEventListener('input', handler);
+      rngEl.addEventListener('input', handler);
+    }
+
+    bindSimpleControl(dom.numTheta, dom.rngTheta, 'theta');
+    bindSimpleControl(dom.numYoungE, dom.rngYoungE, 'youngE');
+    bindSimpleControl(dom.numPoissonV, dom.rngPoissonV, 'poissonV');
+
+    // Cambio de Caso en el Menú Desplegable
+    dom.modeSelect.addEventListener('change', (e) => {
+      state.mode = e.target.value;
+      if (state.mode === 'strainToStress') {
+        // Carga por defecto los valores de tu cuaderno (εx=800, εy=-300, γxy=500, E=70GPa, v=0.33)
+        state.epsX = 800;
+        state.epsY = -300;
+        state.gammaXY = 500;
+        state.youngE = 70;
+        state.poissonV = 0.33;
+        setParamMode('elastic');
+      } else if (state.mode === 'stressToStrain') {
+        setParamMode('elastic');
+      } else {
+        state.sigmaX = 80;
+        state.sigmaY = -40;
+        state.tauXY = 50;
+        setParamMode('angle');
+      }
+      updateUI();
+    });
+
+    // Alternar entre Ángulo θ y Módulo de Young E, v
+    function setParamMode(mode) {
+      state.paramMode = mode;
+      if (mode === 'angle') {
+        dom.btnSwitchAngle.classList.add('active');
+        dom.btnSwitchElastic.classList.remove('active');
+        dom.angleControlsWrap.classList.remove('hidden');
+        dom.elasticControlsWrap.classList.add('hidden');
+      } else {
+        dom.btnSwitchElastic.classList.add('active');
+        dom.btnSwitchAngle.classList.remove('active');
+        dom.elasticControlsWrap.classList.remove('hidden');
+        dom.angleControlsWrap.classList.add('hidden');
+      }
+    }
+
+    dom.btnSwitchAngle.addEventListener('click', () => setParamMode('angle'));
+    dom.btnSwitchElastic.addEventListener('click', () => setParamMode('elastic'));
+
+    dom.unitSelect.addEventListener('change', (e) => {
+      state.unit = e.target.value;
+      updateUI();
+    });
+
+    dom.btnZeroTheta.addEventListener('click', () => {
+      state.theta = 0;
+      updateUI();
+    });
+
+    dom.btnPrincipal.addEventListener('click', () => {
+      const m = computeAll();
+      state.theta = m.thetaP1;
+      updateUI();
+    });
+
+    dom.btnMaxShear.addEventListener('click', () => {
+      const m = computeAll();
+      state.theta = m.thetaS1;
+      updateUI();
+    });
+
+    function enableCanvasDrag(canvas, isMohr) {
+      let dragging = false;
+
+      const updateFromPointer = (clientX, clientY) => {
+        const rect = canvas.getBoundingClientRect();
+        const px = clientX - rect.left;
+        const py = clientY - rect.top;
+        const m = computeAll();
+
+        if (isMohr) {
+          const maxAbsStress = Math.max(Math.abs(m.sigma1), Math.abs(m.sigma2), m.R, 40) * 1.35;
+          const scale = Math.min(rect.width, rect.height) / (2 * maxAbsStress);
+          const originX = rect.width / 2 - m.sigmaAvg * scale * 0.25;
+          const cx = originX + m.sigmaAvg * scale;
+          const cy = rect.height / 2;
+
+          const alpha0 = Math.atan2(state.tauXY, m.diffHalf);
+          const alphaMouse = Math.atan2(py - cy, px - cx);
+          let newTheta = ((alpha0 - alphaMouse) * 180) / (2 * Math.PI);
+          if (newTheta > 90) newTheta -= 180;
+          if (newTheta < -90) newTheta += 180;
+          state.theta = Math.max(-90, Math.min(90, newTheta));
+        } else {
+          const cx = rect.width / 2;
+          const cy = rect.height / 2;
+          let deg = (-Math.atan2(py - cy, px - cx) * 180) / Math.PI;
+          if (deg > 90) deg -= 180;
+          if (deg < -90) deg += 180;
+          state.theta = Math.max(-90, Math.min(90, deg));
+        }
+        updateUI();
+      };
+
+      canvas.addEventListener('pointerdown', (e) => {
+        dragging = true;
+        canvas.setPointerCapture(e.pointerId);
+        updateFromPointer(e.clientX, e.clientY);
+      });
+
+      canvas.addEventListener('pointermove', (e) => {
+        if (dragging) updateFromPointer(e.clientX, e.clientY);
+      });
+
+      canvas.addEventListener('pointerup', () => {
+        dragging = false;
+      });
+    }
+
+    enableCanvasDrag(dom.mohrCanvas, true);
+    enableCanvasDrag(dom.elementCanvas, false);
+    window.addEventListener('resize', updateUI);
+
+    updateUI();
+  </script>
+</body>
+</html>
